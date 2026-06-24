@@ -2,7 +2,7 @@ MIT License
 
 Copyright (c) 2026 Mana
 
-This is a native Swift port of Humation (https://github.com/endo-yusuke/humation),
+This is a native Swift port of Humation (https://github.com/humation-labs/humation),
 a deterministic hand-drawn SVG avatar engine. The bundled asset set
 (`humation-1`) and its design originate from that project and remain under its
 MIT license.

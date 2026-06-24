@@ -9,7 +9,7 @@
 [![SwiftPM](https://img.shields.io/badge/SwiftPM-compatible-brightgreen.svg)](https://swift.org/package-manager)
 [![License: MIT](https://img.shields.io/badge/License-MIT-lightgrey.svg)](LICENSE)
 
-A native Swift port of [Humation](https://github.com/endo-yusuke/humation) — a
+A native Swift port of [Humation](https://github.com/humation-labs/humation) — a
 deterministic, hand-drawn SVG avatar engine. Same seed → same avatar, rendered
 **entirely with Core Graphics** (no `WKWebView`), pixel-faithful to the
 reference renderer.
@@ -118,5 +118,5 @@ must stay within it:
 ## Credits
 
 Engine, asset design, and the `humation-1` set are from
-[endo-yusuke/humation](https://github.com/endo-yusuke/humation) (MIT). This is an
+[humation-labs/humation](https://github.com/humation-labs/humation) (MIT). This is an
 independent Swift/Core Graphics port. See `LICENSE`.

@@ -1,0 +1,7 @@
+Humation Swift
+
+This is a native Swift port of Humation:
+https://github.com/humation-labs/humation
+
+The bundled asset set (`humation-1`) and its design originate from Humation
+and are licensed under MIT.

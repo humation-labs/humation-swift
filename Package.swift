@@ -11,6 +11,7 @@ let package = Package(
     ],
     products: [
         .library(name: "Humation", targets: ["Humation"]),
+        .library(name: "HumationEditor", targets: ["HumationEditor"]),
     ],
     targets: [
         .target(
@@ -19,9 +20,17 @@ let package = Package(
                 .copy("Resources/humation-1.json"),
             ]
         ),
+        .target(
+            name: "HumationEditor",
+            dependencies: ["Humation"]
+        ),
         .testTarget(
             name: "HumationTests",
             dependencies: ["Humation"]
+        ),
+        .testTarget(
+            name: "HumationEditorTests",
+            dependencies: ["Humation", "HumationEditor"]
         ),
     ]
 )

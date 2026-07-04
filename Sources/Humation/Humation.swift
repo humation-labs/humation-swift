@@ -49,10 +49,34 @@ public enum Humation {
         return HumationTraits(seed: seed).resolved(against: manifest)
     }
 
+    /// Profile → resolved design using the bundled manifest.
+    ///
+    /// Partial profiles are completed from `seed` when provided, then from
+    /// manifest defaults. Stale or slot-mismatched profile part ids are healed by
+    /// `HumationTraits.resolved(against:)`.
+    public static func resolved(
+        profile: HumationProfile,
+        seed: String? = nil
+    ) -> ResolvedHumation? {
+        guard let manifest = HumationManifestStore.shared else { return nil }
+        return profile.resolved(against: manifest, seed: seed)
+    }
+
     /// Seed → `CGImage` (cross-platform).
     public static func cgImage(seed: String, pixels: Int) -> CGImage? {
         guard let manifest = HumationManifestStore.shared else { return nil }
         let resolved = HumationTraits(seed: seed).resolved(against: manifest)
+        return HumationRenderer.render(resolved: resolved, manifest: manifest, pixels: pixels)
+    }
+
+    /// Profile → `CGImage` (cross-platform) using the bundled manifest.
+    public static func cgImage(
+        profile: HumationProfile,
+        seed: String? = nil,
+        pixels: Int
+    ) -> CGImage? {
+        guard let manifest = HumationManifestStore.shared else { return nil }
+        let resolved = profile.resolved(against: manifest, seed: seed)
         return HumationRenderer.render(resolved: resolved, manifest: manifest, pixels: pixels)
     }
 
@@ -61,12 +85,32 @@ public enum Humation {
     public static func image(seed: String, pixels: Int) -> UIImage? {
         cgImage(seed: seed, pixels: pixels).map { UIImage(cgImage: $0) }
     }
+
+    /// Profile → `UIImage` using the bundled manifest.
+    public static func image(
+        profile: HumationProfile,
+        seed: String? = nil,
+        pixels: Int
+    ) -> UIImage? {
+        cgImage(profile: profile, seed: seed, pixels: pixels).map { UIImage(cgImage: $0) }
+    }
     #endif
 
     #if canImport(AppKit)
     /// Seed → `NSImage`.
     public static func nsImage(seed: String, pixels: Int) -> NSImage? {
         cgImage(seed: seed, pixels: pixels).map {
+            NSImage(cgImage: $0, size: NSSize(width: pixels, height: pixels))
+        }
+    }
+
+    /// Profile → `NSImage` using the bundled manifest.
+    public static func nsImage(
+        profile: HumationProfile,
+        seed: String? = nil,
+        pixels: Int
+    ) -> NSImage? {
+        cgImage(profile: profile, seed: seed, pixels: pixels).map {
             NSImage(cgImage: $0, size: NSSize(width: pixels, height: pixels))
         }
     }

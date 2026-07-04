@@ -73,16 +73,28 @@ actor HumationImageProvider {
     }
 
     nonisolated static func cacheKey(
-        _ resolved: ResolvedHumation, pixels: Int, crop: HumationManifest.ViewBox? = nil
+        _ resolved: ResolvedHumation,
+        pixels: Int,
+        crop: HumationManifest.ViewBox? = nil,
+        shape: HumationAvatarShape = .square
     ) -> String {
         let cropKey = crop.map { "\($0.x)_\($0.y)_\($0.width)_\($0.height)" } ?? "avatar"
-        return "humation:\(resolved.cacheToken)@\(pixels)#\(cropKey)"
+        let base = "humation:\(resolved.cacheToken)@\(pixels)#\(cropKey)"
+        switch shape {
+        case .square:
+            return base
+        case .circle:
+            return "\(base)|circle"
+        }
     }
 
     func image(
-        for resolved: ResolvedHumation, pixels: Int, crop: HumationManifest.ViewBox? = nil
+        for resolved: ResolvedHumation,
+        pixels: Int,
+        crop: HumationManifest.ViewBox? = nil,
+        shape: HumationAvatarShape = .square
     ) async -> CGImage? {
-        let key = Self.cacheKey(resolved, pixels: pixels, crop: crop)
+        let key = Self.cacheKey(resolved, pixels: pixels, crop: crop, shape: shape)
 
         if let cached = Self.memoryImage(forKey: key) { return cached }
         if let inFlight = pending[key] { return await inFlight.value }
@@ -91,7 +103,11 @@ actor HumationImageProvider {
             guard let manifest = HumationManifestStore.shared else { return nil }
             guard
                 let image = HumationRenderer.render(
-                    resolved: resolved, manifest: manifest, pixels: pixels, crop: crop
+                    resolved: resolved,
+                    manifest: manifest,
+                    pixels: pixels,
+                    crop: crop,
+                    shape: shape
                 )
             else { return nil }
             Self.bitmapCache.setObject(image, forKey: key as NSString, cost: pixels * pixels * 4)

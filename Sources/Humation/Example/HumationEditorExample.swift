@@ -5,6 +5,8 @@ import SwiftUI
 // A self-contained "build your avatar" editor built only with SwiftUI + Humation
 // (no app dependencies). Demonstrates the full flow: live preview, per-slot part
 // grid, colour swatches, and randomise. Drop it into any app or preview it as-is.
+// For the reusable library UI, import the separate HumationEditor product and
+// use `HumationEditorView`.
 
 public struct HumationEditorExample: View {
     @State private var draft: ResolvedHumation?

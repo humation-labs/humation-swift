@@ -61,9 +61,13 @@ Humation.prewarm()
 let image  = Humation.image(seed: user.id, pixels: 256)     // UIImage?
 let cg     = Humation.cgImage(seed: user.id, pixels: 256)   // CGImage?
 
-// SwiftUI
-if let resolved = Humation.resolved(seed: user.id) {
-    HumationAvatarView(resolved: resolved, size: 96)
+// SwiftUI — resolves against the bundled manifest for you
+HumationAvatarView(seed: user.id, size: 96)
+HumationAvatarView(profile: profile, seed: user.id, size: 96)
+
+// "Surprise me" — a random avatar
+if let random = Humation.randomProfile() {
+    let image = Humation.image(profile: random, pixels: 256)
 }
 ```
 
@@ -144,15 +148,15 @@ pull in `HumationEditor` if you use it.
 
 | Type | Role |
 |---|---|
-| `Humation` | Facade: `prewarm()`, `manifest`, seed **or profile** → `image` / `cgImage` / `nsImage` / `resolved` |
-| `HumationProfile` | `Codable` / `Sendable` avatar wire format (selections + colours) with healing on resolve |
+| `Humation` | Facade: `prewarm()`, `manifest`, `randomProfile()`, seed **or profile** → `image` / `cgImage` / `nsImage` / `resolved` |
+| `HumationProfile` | `Codable` / `Sendable` avatar wire format (selections + colours) with healing on resolve; `random(in:using:)` |
 | `HumationManifest` / `HumationManifestStore` | Asset manifest model + bundled `humation-1` loader |
 | `HumationTraits` → `ResolvedHumation` | Input design (seed + overrides) resolved to concrete parts + colours |
 | `HumationRenderer` | `render` / `pngData` → `CGImage` / `Data` (`shape: .square` \| `.circle`), `image` / `nsImage`, `contentBounds(of:in:)` |
-| `HumationAvatarView` | SwiftUI view — cached bitmap, cross-platform |
+| `HumationAvatarView` | SwiftUI view — cached bitmap, cross-platform; `init(seed:…)` / `init(profile:…)` convenience |
 | `HumationEditorView` | Avatar builder UI (in the optional `HumationEditor` product) |
 | `HumationValidator` | Lint a custom pack against the supported SVG subset |
-| `HumationSelectionSlot` / `HumationColorSlot` | The 5 part slots / 6 colour slots |
+| `HumationSelectionSlot` / `HumationColorSlot` | The 5 part slots / 6 colour slots; `displayName`, and `defaultSwatches` for colours |
 
 ## SVG subset
 

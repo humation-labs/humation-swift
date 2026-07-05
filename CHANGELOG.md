@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- Add random avatars: `HumationProfile.random(in:using:)` / `random(in:)` and the
+  `Humation.randomProfile()` facade (pass a `RandomNumberGenerator` for
+  reproducible results).
+- Add `HumationAvatarView(seed:size:)` and `HumationAvatarView(profile:seed:size:)`
+  convenience initialisers that resolve against the bundled manifest.
+- Add slot metadata: `displayName` on `HumationSelectionSlot` / `HumationColorSlot`
+  and `defaultSwatches` on `HumationColorSlot` for building pickers.
+
 ## 1.1.0 - 2026-07-05
 
 - Add `HumationProfile`: a serialisable avatar wire format with profile healing

@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.2.0 - 2026-07-05
 
 - Add random avatars: `HumationProfile.random(in:using:)` / `random(in:)` and the
   `Humation.randomProfile()` facade (pass a `RandomNumberGenerator` for
@@ -9,6 +9,10 @@
   convenience initialisers that resolve against the bundled manifest.
 - Add slot metadata: `displayName` on `HumationSelectionSlot` / `HumationColorSlot`
   and `defaultSwatches` on `HumationColorSlot` for building pickers.
+- Add avatar sharing: `ResolvedHumation` conforms to `Transferable` (iOS 16 /
+  macOS 13+) so avatars work with `ShareLink`, drag-and-drop, and paste as a PNG,
+  plus a `ResolvedHumation.pngData(pixels:shape:)` convenience that renders
+  against the bundled manifest.
 
 ## 1.1.0 - 2026-07-05
 

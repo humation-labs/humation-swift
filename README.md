@@ -124,6 +124,18 @@ let png = HumationRenderer.pngData(
 )
 ```
 
+### Sharing
+
+`ResolvedHumation` conforms to `Transferable` (iOS 16 / macOS 13+), so avatars
+drop straight into a share sheet, drag session, or pasteboard as a PNG. There's
+also a `pngData()` convenience that renders against the bundled manifest:
+
+```swift
+ShareLink(item: resolved, preview: .init("My avatar"))   // exports a 512px PNG
+
+let png = resolved.pngData(pixels: 256, shape: .circle)  // Data?
+```
+
 ## Built-in editor
 
 `HumationEditor` is an optional product with a ready-made avatar builder. Add it
@@ -151,7 +163,7 @@ pull in `HumationEditor` if you use it.
 | `Humation` | Facade: `prewarm()`, `manifest`, `randomProfile()`, seed **or profile** → `image` / `cgImage` / `nsImage` / `resolved` |
 | `HumationProfile` | `Codable` / `Sendable` avatar wire format (selections + colours) with healing on resolve; `random(in:using:)` |
 | `HumationManifest` / `HumationManifestStore` | Asset manifest model + bundled `humation-1` loader |
-| `HumationTraits` → `ResolvedHumation` | Input design (seed + overrides) resolved to concrete parts + colours |
+| `HumationTraits` → `ResolvedHumation` | Input design resolved to concrete parts + colours; `Transferable` + `pngData()` for sharing |
 | `HumationRenderer` | `render` / `pngData` → `CGImage` / `Data` (`shape: .square` \| `.circle`), `image` / `nsImage`, `contentBounds(of:in:)` |
 | `HumationAvatarView` | SwiftUI view — cached bitmap, cross-platform; `init(seed:…)` / `init(profile:…)` convenience |
 | `HumationEditorView` | Avatar builder UI (in the optional `HumationEditor` product) |

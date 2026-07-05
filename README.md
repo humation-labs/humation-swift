@@ -4,6 +4,7 @@
 
 # Humation
 
+[![CI](https://github.com/humation-labs/humation-swift/actions/workflows/ci.yml/badge.svg)](https://github.com/humation-labs/humation-swift/actions/workflows/ci.yml)
 [![Swift 6](https://img.shields.io/badge/Swift-6.0-F05138.svg?logo=swift&logoColor=white)](https://swift.org)
 [![Platforms](https://img.shields.io/badge/Platforms-iOS%20%7C%20macOS%20%7C%20tvOS%20%7C%20visionOS-blue.svg)](#)
 [![SwiftPM](https://img.shields.io/badge/SwiftPM-compatible-brightgreen.svg)](https://swift.org/package-manager)

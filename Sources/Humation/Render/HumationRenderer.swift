@@ -1,5 +1,7 @@
 import CoreGraphics
 import Foundation
+import ImageIO
+import UniformTypeIdentifiers
 
 #if canImport(UIKit)
 import UIKit
@@ -21,6 +23,11 @@ import AppKit
 // Pure and thread-agnostic — safe to call from the image-provider actor or
 // synchronously.
 
+public enum HumationAvatarShape: Sendable {
+    case square
+    case circle
+}
+
 public enum HumationRenderer {
 
     /// Render at an exact pixel size to a `CGImage` (cross-platform).
@@ -33,10 +40,12 @@ public enum HumationRenderer {
         resolved: ResolvedHumation,
         manifest: HumationManifest,
         pixels: Int,
-        crop: HumationManifest.ViewBox? = nil
+        crop: HumationManifest.ViewBox? = nil,
+        shape: HumationAvatarShape = .square
     ) -> CGImage? {
         let crop = crop ?? manifest.avatarCrop
         let side = CGFloat(pixels)
+        let rect = CGRect(x: 0, y: 0, width: side, height: side)
         let scale = side / CGFloat(crop.width) // crop is square
 
         let isOpaque = resolved.background != "transparent"
@@ -54,13 +63,20 @@ public enum HumationRenderer {
             )
         else { return nil }
 
+        ctx.clear(rect)
+
         // Flip into SVG's top-left, y-down space.
         ctx.translateBy(x: 0, y: side)
         ctx.scaleBy(x: 1, y: -1)
 
+        if shape == .circle {
+            ctx.addEllipse(in: rect)
+            ctx.clip()
+        }
+
         if isOpaque, let bg = HumationRGBA(hex: resolved.background) {
             ctx.setFillColor(bg.cgColor)
-            ctx.fill(CGRect(x: 0, y: 0, width: side, height: side))
+            ctx.fill(rect)
         }
 
         // World → pixel: scale, then shift the crop origin to (0,0).
@@ -89,9 +105,13 @@ public enum HumationRenderer {
         resolved: ResolvedHumation,
         manifest: HumationManifest,
         pixels: Int,
-        crop: HumationManifest.ViewBox? = nil
+        crop: HumationManifest.ViewBox? = nil,
+        shape: HumationAvatarShape = .square
     ) -> UIImage? {
-        guard let cg = render(resolved: resolved, manifest: manifest, pixels: pixels, crop: crop)
+        guard
+            let cg = render(
+                resolved: resolved, manifest: manifest, pixels: pixels, crop: crop, shape: shape
+            )
         else { return nil }
         return UIImage(cgImage: cg)
     }
@@ -103,13 +123,43 @@ public enum HumationRenderer {
         resolved: ResolvedHumation,
         manifest: HumationManifest,
         pixels: Int,
-        crop: HumationManifest.ViewBox? = nil
+        crop: HumationManifest.ViewBox? = nil,
+        shape: HumationAvatarShape = .square
     ) -> NSImage? {
-        guard let cg = render(resolved: resolved, manifest: manifest, pixels: pixels, crop: crop)
+        guard
+            let cg = render(
+                resolved: resolved, manifest: manifest, pixels: pixels, crop: crop, shape: shape
+            )
         else { return nil }
         return NSImage(cgImage: cg, size: NSSize(width: pixels, height: pixels))
     }
     #endif
+
+    /// PNG data convenience for notification-extension image payloads.
+    public static func pngData(
+        resolved: ResolvedHumation,
+        manifest: HumationManifest,
+        pixels: Int,
+        crop: HumationManifest.ViewBox? = nil,
+        shape: HumationAvatarShape = .square
+    ) -> Data? {
+        guard
+            let cg = render(
+                resolved: resolved, manifest: manifest, pixels: pixels, crop: crop, shape: shape
+            )
+        else { return nil }
+
+        let data = NSMutableData()
+        guard
+            let destination = CGImageDestinationCreateWithData(
+                data, UTType.png.identifier as CFString, 1, nil
+            )
+        else { return nil }
+
+        CGImageDestinationAddImage(destination, cg, nil)
+        guard CGImageDestinationFinalize(destination) else { return nil }
+        return data as Data
+    }
 
     /// World-space bounding box of a part's drawn content (path bounds + stroke
     /// allowance, offset by its layer). Lets callers frame a part tightly without

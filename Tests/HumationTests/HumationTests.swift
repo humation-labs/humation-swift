@@ -69,6 +69,61 @@ final class HumationTests: XCTestCase {
         XCTAssertEqual(image.height, 128)
     }
 
+    func testCircleRenderClipsCornersToTransparent() throws {
+        let manifest = try XCTUnwrap(HumationManifestStore.shared)
+        let resolved = opaqueResolved(against: manifest)
+        let image = try XCTUnwrap(
+            HumationRenderer.render(
+                resolved: resolved, manifest: manifest, pixels: 64, shape: .circle
+            )
+        )
+
+        XCTAssertEqual(try alpha(in: image, x: 0, y: 0), 0)
+        XCTAssertEqual(try alpha(in: image, x: 63, y: 0), 0)
+        XCTAssertEqual(try alpha(in: image, x: 0, y: 63), 0)
+        XCTAssertEqual(try alpha(in: image, x: 63, y: 63), 0)
+        XCTAssertEqual(try alpha(in: image, x: 32, y: 32), 255)
+    }
+
+    func testSquareRenderKeepsCornersOpaque() throws {
+        let manifest = try XCTUnwrap(HumationManifestStore.shared)
+        let resolved = opaqueResolved(against: manifest)
+        let image = try XCTUnwrap(
+            HumationRenderer.render(
+                resolved: resolved, manifest: manifest, pixels: 64, shape: .square
+            )
+        )
+
+        XCTAssertEqual(try alpha(in: image, x: 0, y: 0), 255)
+        XCTAssertEqual(try alpha(in: image, x: 63, y: 0), 255)
+        XCTAssertEqual(try alpha(in: image, x: 0, y: 63), 255)
+        XCTAssertEqual(try alpha(in: image, x: 63, y: 63), 255)
+    }
+
+    func testPNGDataStartsWithPNGMagicBytes() throws {
+        let manifest = try XCTUnwrap(HumationManifestStore.shared)
+        let resolved = opaqueResolved(against: manifest)
+        let data = try XCTUnwrap(
+            HumationRenderer.pngData(
+                resolved: resolved, manifest: manifest, pixels: 64, shape: .circle
+            )
+        )
+
+        XCTAssertEqual(Array(data.prefix(4)), [0x89, 0x50, 0x4E, 0x47])
+    }
+
+    func testImageProviderCacheKeyIncludesShape() throws {
+        let manifest = try XCTUnwrap(HumationManifestStore.shared)
+        let resolved = opaqueResolved(against: manifest)
+
+        let legacy = HumationImageProvider.cacheKey(resolved, pixels: 64)
+        let square = HumationImageProvider.cacheKey(resolved, pixels: 64, shape: .square)
+        let circle = HumationImageProvider.cacheKey(resolved, pixels: 64, shape: .circle)
+
+        XCTAssertEqual(square, legacy)
+        XCTAssertNotEqual(circle, square)
+    }
+
     func testBundledManifestIsValid() throws {
         let manifest = try XCTUnwrap(HumationManifestStore.shared)
         let issues = HumationValidator.validate(manifest)
@@ -92,5 +147,40 @@ final class HumationTests: XCTestCase {
         if let none = manifest.parts(in: .item).first(where: { $0.name == "none" }) {
             XCTAssertNil(HumationRenderer.contentBounds(of: none, in: manifest))
         }
+    }
+
+    private func opaqueResolved(against manifest: HumationManifest) -> ResolvedHumation {
+        HumationTraits(colors: [.background: "FF00AA"], seed: "render-shape")
+            .resolved(against: manifest)
+    }
+
+    private func alpha(in image: CGImage, x: Int, y: Int) throws -> UInt8 {
+        let bytesPerPixel = 4
+        let bytesPerRow = image.width * bytesPerPixel
+        var bytes = [UInt8](repeating: 0, count: bytesPerRow * image.height)
+        let colorSpace = CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB()
+        let ok = bytes.withUnsafeMutableBytes { buffer -> Bool in
+            guard
+                let baseAddress = buffer.baseAddress,
+                let ctx = CGContext(
+                    data: baseAddress,
+                    width: image.width,
+                    height: image.height,
+                    bitsPerComponent: 8,
+                    bytesPerRow: bytesPerRow,
+                    space: colorSpace,
+                    bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+                )
+            else { return false }
+
+            ctx.interpolationQuality = .none
+            ctx.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
+            ctx.flush()
+            return true
+        }
+        XCTAssertTrue(ok)
+
+        let index = (y * bytesPerRow) + (x * bytesPerPixel) + 3
+        return bytes[index]
     }
 }

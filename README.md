@@ -34,7 +34,9 @@ engine, so the same seed yields the same avatar on web and native.
 
 ## Demo
 
-https://github.com/user-attachments/assets/b12bb7cb-a09c-4923-be25-b234b6a5d35f
+<p align="center">
+  <img src="Assets/demo.gif" alt="Humation avatar editor demo" width="280">
+</p>
 
 ## Install
 

@@ -75,6 +75,11 @@ extension HumationTraits {
     /// Resolve to concrete parts/colours. Mirrors the reference `resolveAvatarState`:
     /// start from manifest defaults, apply seeded picks for every slot when a
     /// seed is present, then let explicit `selections`/`colors` override.
+    ///
+    /// Explicit selection entries are healed for profile compatibility: when a
+    /// part id is missing from the manifest, or exists but belongs to a different
+    /// `selectionSlot`, that entry is treated as unspecified and falls back to the
+    /// seeded pick or manifest default.
     public func resolved(against manifest: HumationManifest) -> ResolvedHumation {
         // 1. Defaults.
         var resolvedSelections: [HumationSelectionSlot: String] = [:]
@@ -96,6 +101,9 @@ extension HumationTraits {
 
         // 3. Explicit selection overrides.
         for (slot, partId) in selections {
+            guard manifest.part(id: partId)?.selectionSlot == slot.rawValue else {
+                continue
+            }
             resolvedSelections[slot] = partId
         }
 

@@ -87,19 +87,69 @@ let issues = HumationValidator.validate(pack)            // [] = renderable
 guard issues.isEmpty else { print(issues); return }
 ```
 
-See `Sources/Humation/Example/HumationEditorExample.swift` for a self-contained
-SwiftUI "build your avatar" editor (parts grid + colour swatches + randomise),
-with no dependencies beyond SwiftUI + Humation.
+### Persistable profiles
+
+`HumationProfile` is a `Codable` / `Sendable` wire format for storing or syncing
+an avatar — the chosen part per slot plus colour overrides — independent of the
+asset pack. Round-trip it through your own storage, then render:
+
+```swift
+// Capture the current design as a serialisable profile.
+let profile = HumationProfile(resolved: resolved)
+let json = try JSONEncoder().encode(profile)
+
+// …later: decode and render (UIImage / CGImage / NSImage).
+let restored = try JSONDecoder().decode(HumationProfile.self, from: json)
+let image = Humation.image(profile: restored, seed: user.id, pixels: 256)
+```
+
+Profiles *heal* on resolve: part ids that are stale or no longer valid for their
+slot (e.g. after an asset-pack update) fall back to `seed`, then to manifest
+defaults — so a persisted profile always renders something valid.
+
+### Rendering options
+
+`HumationRenderer.render` / `pngData` take a `shape` (`.square` default, or
+`.circle` for a pre-clipped round avatar). `pngData` returns raw `Data` when you
+need bytes rather than an image — e.g. a notification-service extension payload:
+
+```swift
+let png = HumationRenderer.pngData(
+    resolved: resolved, manifest: manifest, pixels: 128, shape: .circle
+)
+```
+
+## Built-in editor
+
+`HumationEditor` is an optional product with a ready-made avatar builder. Add it
+next to `Humation` in your target's dependencies, then bind a profile:
+
+```swift
+import HumationEditor
+
+@State private var profile = HumationProfile()   // empty → healed from seed / defaults
+
+HumationEditorView(profile: $profile, seed: user.id)   // parts grid + colour swatches + randomise
+// theme it:
+HumationEditorView(profile: $profile, configuration: .init(accent: .pink))
+```
+
+`HumationEditorConfiguration` controls the tabs, per-slot colour palettes,
+accent, cell background, corner radius, font, and whether background colours are
+offered. The core `Humation` product has no SwiftUI editor dependency — you only
+pull in `HumationEditor` if you use it.
 
 ## API at a glance
 
 | Type | Role |
 |---|---|
-| `Humation` | Facade: `prewarm()`, `manifest`, seed → `image` / `cgImage` / `nsImage` / `resolved` |
+| `Humation` | Facade: `prewarm()`, `manifest`, seed **or profile** → `image` / `cgImage` / `nsImage` / `resolved` |
+| `HumationProfile` | `Codable` / `Sendable` avatar wire format (selections + colours) with healing on resolve |
 | `HumationManifest` / `HumationManifestStore` | Asset manifest model + bundled `humation-1` loader |
 | `HumationTraits` → `ResolvedHumation` | Input design (seed + overrides) resolved to concrete parts + colours |
-| `HumationRenderer` | `render(…) → CGImage`, `image` / `nsImage`, `contentBounds(of:in:)` |
+| `HumationRenderer` | `render` / `pngData` → `CGImage` / `Data` (`shape: .square` \| `.circle`), `image` / `nsImage`, `contentBounds(of:in:)` |
 | `HumationAvatarView` | SwiftUI view — cached bitmap, cross-platform |
+| `HumationEditorView` | Avatar builder UI (in the optional `HumationEditor` product) |
 | `HumationValidator` | Lint a custom pack against the supported SVG subset |
 | `HumationSelectionSlot` / `HumationColorSlot` | The 5 part slots / 6 colour slots |
 

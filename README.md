@@ -90,6 +90,10 @@ Load and validate a manifest authored outside the bundled set:
 let pack = try Humation.manifest(contentsOf: url)        // or .manifest(from: data)
 let issues = HumationValidator.validate(pack)            // [] = renderable
 guard issues.isEmpty else { print(issues); return }
+
+// Optional: make it the process-wide default for every convenience API
+// (Humation.image / resolved / randomProfile, HumationAvatarView(seed:), …).
+Humation.setDefaultManifest(pack)   // nil restores the bundled manifest
 ```
 
 ### Persistable profiles
@@ -160,9 +164,9 @@ pull in `HumationEditor` if you use it.
 
 | Type | Role |
 |---|---|
-| `Humation` | Facade: `prewarm()`, `manifest`, `randomProfile()`, seed **or profile** → `image` / `cgImage` / `nsImage` / `resolved` |
+| `Humation` | Facade: `prewarm()`, `manifest`, `setDefaultManifest(_:)`, `randomProfile()`, seed **or profile** → `image` / `cgImage` / `nsImage` / `resolved` |
 | `HumationProfile` | `Codable` / `Sendable` avatar wire format (selections + colours) with healing on resolve; `random(in:using:)` |
-| `HumationManifest` / `HumationManifestStore` | Asset manifest model + bundled `humation-1` loader |
+| `HumationManifest` / `HumationManifestStore` | Asset manifest model + bundled `humation-1` loader (`shared`) and default (`current`) |
 | `HumationTraits` → `ResolvedHumation` | Input design resolved to concrete parts + colours; `Transferable` + `pngData()` for sharing |
 | `HumationRenderer` | `render` / `pngData` → `CGImage` / `Data` (`shape: .square` \| `.circle`), `image` / `nsImage`, `contentBounds(of:in:)` |
 | `HumationAvatarView` | SwiftUI view — cached bitmap, cross-platform; `init(seed:…)` / `init(profile:…)` convenience |

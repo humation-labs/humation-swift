@@ -120,13 +120,53 @@ extension HumationManifest {
 
 // MARK: - Shared store
 
-/// Loads and caches the bundled manifest once. Decoding ~660KB of JSON is done
-/// lazily on first access and held for the process lifetime (the manifest is
-/// immutable and small in memory once the inline SVG strings are parsed away by
-/// the renderer's geometry cache).
+/// Loads and caches the bundled manifest once, and holds the process-wide
+/// default manifest. Decoding ~660KB of JSON is done lazily on first access and
+/// held for the process lifetime (the manifest is immutable and small in memory
+/// once the inline SVG strings are parsed away by the renderer's geometry cache).
+///
+/// `shared` is always the bundled asset set; `current` is what the convenience
+/// APIs render with — the bundled manifest unless an override has been installed
+/// via `Humation.setDefaultManifest(_:)`.
 public enum HumationManifestStore {
-    /// Decoded manifest, or `nil` if the bundle resource is missing/corrupt.
+    /// Decoded bundled manifest, or `nil` if the bundle resource is missing/corrupt.
     public static let shared: HumationManifest? = load()
+
+    /// The default manifest: the override installed by
+    /// `Humation.setDefaultManifest(_:)`, falling back to the bundled `shared`.
+    public static var current: HumationManifest? {
+        snapshot.manifest
+    }
+
+    // MARK: Override
+
+    // Guarded by `lock`. NSLock (not OSAllocatedUnfairLock) because the package
+    // still deploys back to iOS 15 / macOS 12.
+    private static let lock = NSLock()
+    private nonisolated(unsafe) static var override: HumationManifest?
+    private nonisolated(unsafe) static var overrideGeneration = 0
+
+    /// Bumped on every `setOverride(_:)`. Bitmap caches keyed only by design fold
+    /// this in so a swapped default never serves renders of the previous one.
+    package static var generation: Int {
+        snapshot.generation
+    }
+
+    /// The current default manifest and its generation, read atomically.
+    static var snapshot: (manifest: HumationManifest?, generation: Int) {
+        lock.lock()
+        let (manifest, generation) = (override, overrideGeneration)
+        lock.unlock()
+        // Touch the lazily decoded bundle outside the lock.
+        return (manifest ?? shared, generation)
+    }
+
+    static func setOverride(_ manifest: HumationManifest?) {
+        lock.lock()
+        defer { lock.unlock() }
+        override = manifest
+        overrideGeneration &+= 1
+    }
 
     private static func load() -> HumationManifest? {
         guard

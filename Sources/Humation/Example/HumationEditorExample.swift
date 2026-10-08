@@ -18,7 +18,7 @@ public struct HumationEditorExample: View {
 
     public var body: some View {
         Group {
-            if let manifest = HumationManifestStore.shared, let draft {
+            if let manifest = HumationManifestStore.current, let draft {
                 content(manifest: manifest, draft: draft)
             } else {
                 Text("Humation assets unavailable")
@@ -26,7 +26,7 @@ public struct HumationEditorExample: View {
             }
         }
         .onAppear {
-            if draft == nil, let manifest = HumationManifestStore.shared {
+            if draft == nil, let manifest = HumationManifestStore.current {
                 draft = HumationTraits(seed: "example").resolved(against: manifest)
             }
         }

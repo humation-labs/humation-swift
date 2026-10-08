@@ -38,7 +38,10 @@ struct HumationEditorRenderView: View {
 
     private var renderKey: String {
         let cropKey = crop.map { "\($0.x)_\($0.y)_\($0.width)_\($0.height)" } ?? "avatar"
-        return "humation-editor:\(resolved.cacheToken)@\(pixels)#\(cropKey)"
+        // The manifest comes from `Humation.manifest`; fold in its generation so a
+        // swapped default manifest never serves bitmaps of the previous one.
+        let generation = HumationManifestStore.generation
+        return "humation-editor:\(resolved.cacheToken)@\(pixels)#\(cropKey)~m\(generation)"
     }
 
     private var displayImage: CGImage? {

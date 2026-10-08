@@ -6,13 +6,22 @@ import Foundation
 // Parses each part-layer SVG once into transform-baked, colour-bound geometry,
 // then reuses it across every recolour and size (geometry is colour/size
 // independent). NSCache is thread-safe and evicts under memory pressure.
+//
+// Callers key by `partId#layerSlot`, which is only unique within one manifest:
+// a custom pack (or a swapped default manifest) may reuse a part id with
+// different SVG. The SVG's hash is folded into the key and the source is
+// re-checked on hit, so a stale parse is never served across manifests.
 
 final class HumationGeometryCache: @unchecked Sendable {
     static let shared = HumationGeometryCache()
 
     private final class Box {
+        let svg: String
         let part: HumationParsedPart
-        init(_ part: HumationParsedPart) { self.part = part }
+        init(svg: String, part: HumationParsedPart) {
+            self.svg = svg
+            self.part = part
+        }
     }
 
     private let cache = NSCache<NSString, Box>()
@@ -22,11 +31,12 @@ final class HumationGeometryCache: @unchecked Sendable {
     }
 
     func parsed(key: String, svg: String) -> HumationParsedPart {
-        if let box = cache.object(forKey: key as NSString) {
+        let cacheKey = "\(key)|\(svg.hashValue)" as NSString
+        if let box = cache.object(forKey: cacheKey), box.svg == svg {
             return box.part
         }
         let parsed = HumationSVGParser.parse(svg)
-        cache.setObject(Box(parsed), forKey: key as NSString)
+        cache.setObject(Box(svg: svg, part: parsed), forKey: cacheKey)
         return parsed
     }
 }
@@ -52,7 +62,8 @@ enum HumationBucket {
 // Backs the SwiftUI views' live preview + thumbnails. A dedicated memory-only
 // NSCache of `CGImage`s (cross-platform — no UIKit) keeps these transient
 // renders cheap to regenerate; the actor coalesces in-flight renders so a grid
-// doesn't render the same design twice.
+// doesn't render the same design twice. Keys carry the default-manifest
+// generation, so `Humation.setDefaultManifest(_:)` invalidates prior renders.
 
 actor HumationImageProvider {
     static let shared = HumationImageProvider()
@@ -76,10 +87,11 @@ actor HumationImageProvider {
         _ resolved: ResolvedHumation,
         pixels: Int,
         crop: HumationManifest.ViewBox? = nil,
-        shape: HumationAvatarShape = .square
+        shape: HumationAvatarShape = .square,
+        generation: Int = HumationManifestStore.generation
     ) -> String {
         let cropKey = crop.map { "\($0.x)_\($0.y)_\($0.width)_\($0.height)" } ?? "avatar"
-        let base = "humation:\(resolved.cacheToken)@\(pixels)#\(cropKey)"
+        let base = "humation:\(resolved.cacheToken)@\(pixels)#\(cropKey)~m\(generation)"
         switch shape {
         case .square:
             return base
@@ -94,13 +106,17 @@ actor HumationImageProvider {
         crop: HumationManifest.ViewBox? = nil,
         shape: HumationAvatarShape = .square
     ) async -> CGImage? {
-        let key = Self.cacheKey(resolved, pixels: pixels, crop: crop, shape: shape)
+        let generation = HumationManifestStore.generation
+        let key = Self.cacheKey(
+            resolved, pixels: pixels, crop: crop, shape: shape, generation: generation
+        )
 
         if let cached = Self.memoryImage(forKey: key) { return cached }
         if let inFlight = pending[key] { return await inFlight.value }
 
         let task = Task { () -> CGImage? in
-            guard let manifest = HumationManifestStore.shared else { return nil }
+            let snapshot = HumationManifestStore.snapshot
+            guard let manifest = snapshot.manifest else { return nil }
             guard
                 let image = HumationRenderer.render(
                     resolved: resolved,
@@ -110,7 +126,11 @@ actor HumationImageProvider {
                     shape: shape
                 )
             else { return nil }
-            Self.bitmapCache.setObject(image, forKey: key as NSString, cost: pixels * pixels * 4)
+            // Skip caching if the default manifest was swapped after `key` was
+            // computed; the next request re-keys under the new generation.
+            if snapshot.generation == generation {
+                Self.bitmapCache.setObject(image, forKey: key as NSString, cost: pixels * pixels * 4)
+            }
             return image
         }
         pending[key] = task

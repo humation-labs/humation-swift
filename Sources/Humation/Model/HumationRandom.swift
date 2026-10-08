@@ -40,20 +40,20 @@ extension HumationProfile {
 }
 
 extension Humation {
-    /// A random profile using the bundled manifest, or `nil` if the manifest is
+    /// A random profile using the default manifest, or `nil` if the manifest is
     /// unavailable. Pair with `image(profile:pixels:)` for a one-line "surprise
     /// me" avatar.
     public static func randomProfile() -> HumationProfile? {
-        guard let manifest = HumationManifestStore.shared else { return nil }
+        guard let manifest = HumationManifestStore.current else { return nil }
         return HumationProfile.random(in: manifest)
     }
 
-    /// A random profile using the bundled manifest and an explicit generator
+    /// A random profile using the default manifest and an explicit generator
     /// (reproducible), or `nil` if the manifest is unavailable.
     public static func randomProfile(
         using generator: inout some RandomNumberGenerator
     ) -> HumationProfile? {
-        guard let manifest = HumationManifestStore.shared else { return nil }
+        guard let manifest = HumationManifestStore.current else { return nil }
         return HumationProfile.random(in: manifest, using: &generator)
     }
 }

@@ -7,10 +7,11 @@ import Foundation
 // the manifest themselves.
 
 extension ResolvedHumation {
-    /// PNG bytes for this design rendered against the bundled manifest, or `nil`
+    /// PNG bytes for this design rendered against the default manifest
+    /// (bundled unless overridden via `Humation.setDefaultManifest(_:)`), or `nil`
     /// if the manifest is unavailable.
     public func pngData(pixels: Int = 512, shape: HumationAvatarShape = .square) -> Data? {
-        guard let manifest = HumationManifestStore.shared else { return nil }
+        guard let manifest = HumationManifestStore.current else { return nil }
         return HumationRenderer.pngData(
             resolved: self, manifest: manifest, pixels: pixels, shape: shape
         )
@@ -28,7 +29,7 @@ extension ResolvedHumation {
 import CoreTransferable
 import UniformTypeIdentifiers
 
-/// Error surfaced when a `Transferable` avatar export cannot render (the bundled
+/// Error surfaced when a `Transferable` avatar export cannot render (the default
 /// manifest is missing).
 public enum HumationExportError: Error, Sendable {
     case renderingUnavailable
